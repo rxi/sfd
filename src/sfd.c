@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "sfd.h"
 
@@ -168,7 +169,10 @@ static const char* file_dialog(sfd_Options *opt, int save) {
   n += sprintf(buf + n, " --title=\"%s\"", title);
 
   if (opt->path && opt->path[0] != '\0') {
-    n += sprintf(buf + n, " --filename=\"%s\"", opt->path);
+    n += sprintf(buf + n, " --filename=\"");
+    realpath(opt->path, buf + n);
+    n += strlen(buf + n);
+    n += sprintf(buf + n, "/\"");
   }
 
   if (opt->filter) {

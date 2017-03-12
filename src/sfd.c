@@ -160,7 +160,7 @@ static const char* file_dialog(sfd_Options *opt, int save) {
     n += sprintf(buf + n, " --save --confirm-overwrite");
   }
 
-  if (opt->title && opt->title[0] != '\0') {
+  if (opt->title) {
     title = opt->title;
   } else {
     title = save ? "Save File" : "Open File";

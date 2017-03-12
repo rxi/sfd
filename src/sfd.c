@@ -152,20 +152,22 @@ static const char* file_dialog(sfd_Options *opt, int save) {
     return NULL;
   }
 
-  if (save) {
-    title = "Save File";
-  } else {
-    title = "Open File";
-  }
 
   n = sprintf(buf, "zenity --file-selection");
-  n += sprintf(buf + n, " --title=\"%s\"", opt->title ? opt->title : title);
 
   if (save) {
     n += sprintf(buf + n, " --save --confirm-overwrite");
   }
 
-  if (opt->path) {
+  if (opt->title && opt->title[0] != '\0') {
+    title = opt->title;
+  } else {
+    title = save ? "Save File" : "Open File";
+  }
+
+  n += sprintf(buf + n, " --title=\"%s\"", title);
+
+  if (opt->path && opt->path[0] != '\0') {
     n += sprintf(buf + n, " --filename=\"%s\"", opt->path);
   }
 

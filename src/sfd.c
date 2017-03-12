@@ -94,20 +94,17 @@ static const char* make_filter_str(sfd_Options *opt) {
 
 static void init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
   static char result_buf[2048];
-
   result_buf[0] = '\0';
-  if (opt->path) {
-    strcpy(result_buf, opt->path);
-  }
 
   memset(ofn, 0, sizeof(*ofn));
-  ofn->lStructSize  = sizeof(*ofn);
-  ofn->lpstrFilter  = make_filter_str(opt);
-  ofn->nFilterIndex = 1;
-  ofn->lpstrFile    = result_buf;
-  ofn->Flags        = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-  ofn->nMaxFile     = sizeof(result_buf) - 1;
-  ofn->lpstrTitle   = opt->title;
+  ofn->lStructSize      = sizeof(*ofn);
+  ofn->lpstrFilter      = make_filter_str(opt);
+  ofn->nFilterIndex     = 1;
+  ofn->lpstrFile        = result_buf;
+  ofn->Flags            = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+  ofn->nMaxFile         = sizeof(result_buf) - 1;
+  ofn->lpstrInitialDir  = opt->path;
+  ofn->lpstrTitle       = opt->title;
 }
 
 

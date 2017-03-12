@@ -31,7 +31,7 @@ the file dialog — All fields of the `sfd_Options` struct are *optional*.
 | Field           | Description
 |-----------------|-------------------------------------------------------------
 | `.title`        | Title for the file dialog window
-| `.path`         | Default directory or filename
+| `.path`         | Default directory
 | `.filter_name`  | Name used to describe the file filter
 | `.filter`       | File filters separated by <code>&#124;</code>
 

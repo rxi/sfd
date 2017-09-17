@@ -141,6 +141,7 @@ const char* sfd_save_dialog(sfd_Options *opt) {
 static const char* file_dialog(sfd_Options *opt, int save) {
   static char result_buf[2048];
   char buf[2048];
+  char *p;
   const char *title;
   FILE *fp;
   int n, len;
@@ -170,7 +171,11 @@ static const char* file_dialog(sfd_Options *opt, int save) {
 
   if (opt->path && opt->path[0] != '\0') {
     n += sprintf(buf + n, " --filename=\"");
-    realpath(opt->path, buf + n);
+    p = realpath(opt->path, buf + n);
+    if (p == NULL) {
+      last_error = "call to realpath() failed";
+      return NULL;
+    }
     n += strlen(buf + n);
     n += sprintf(buf + n, "/\"");
   }

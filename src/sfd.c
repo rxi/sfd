@@ -28,17 +28,17 @@
 #include "sfd.h"
 
 
-static const char *last_error;
+static const char *sfd_last_error;
 
 
 const char* sfd_get_error(void) {
-  const char *res = last_error;
-  last_error = NULL;
+  const char *res = sfd_last_error;
+  sfd_last_error = NULL;
   return res;
 }
 
 
-static int next_filter(char *dst, const char **p) {
+static int sfd_next_filter(char *dst, const char **p) {
   int len;
 
   *p += strspn(*p, "|");
@@ -63,8 +63,38 @@ static int next_filter(char *dst, const char **p) {
 
 #include <windows.h>
 
+#pragma comment(lib, "Comdlg32.lib")
 
-static const char* make_filter_str(sfd_Options *opt) {
+typedef struct sfd_FindMainWindowInfo {
+  unsigned long process_id;
+  void* handle_root;
+  void* handle_first;
+} sfd_FindMainWindowInfo;
+
+int sfd_find_main_window_callback(HWND handle, LPARAM lParam)
+{
+  sfd_FindMainWindowInfo* info = (sfd_FindMainWindowInfo*)lParam;
+  unsigned long process_id = 0;
+  GetWindowThreadProcessId(handle, &process_id);
+  if (info->process_id == process_id) {
+    info->handle_first = handle;
+    if (GetWindow(handle, GW_OWNER) == 0 && IsWindowVisible(handle)) {
+      info->handle_root = handle;
+      return 0;
+    }
+  }
+  return 1;
+}
+
+HWND sfd_find_main_window() {
+  sfd_FindMainWindowInfo info = {
+    .process_id = GetCurrentProcessId()
+  };
+  EnumWindows(sfd_find_main_window_callback, (LPARAM)&info);
+  return info.handle_root;
+}
+
+static const char* sfd_make_filter_str(sfd_Options *opt) {
   static char buf[1024];
   int n;
 
@@ -78,7 +108,7 @@ static const char* make_filter_str(sfd_Options *opt) {
     n += sprintf(buf + n, "%s", name) + 1;
 
     p = opt->filter;
-    while (next_filter(b, &p)) {
+    while (sfd_next_filter(b, &p)) {
       n += sprintf(buf + n, "%s;", b);
     }
 
@@ -93,13 +123,18 @@ static const char* make_filter_str(sfd_Options *opt) {
 }
 
 
-static void init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
+static void sfd_init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
   static char result_buf[2048];
   result_buf[0] = '\0';
 
   memset(ofn, 0, sizeof(*ofn));
+  if (opt->parent == 0) {
+    ofn->hwndOwner = sfd_find_main_window();
+  } else {
+    ofn->hwndOwner = opt->parent;
+  }
   ofn->lStructSize      = sizeof(*ofn);
-  ofn->lpstrFilter      = make_filter_str(opt);
+  ofn->lpstrFilter      = sfd_make_filter_str(opt);
   ofn->nFilterIndex     = 1;
   ofn->lpstrFile        = result_buf;
   ofn->Flags            = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
@@ -112,8 +147,8 @@ static void init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
 const char* sfd_open_dialog(sfd_Options *opt) {
   int ok;
   OPENFILENAME ofn;
-  last_error = NULL;
-  init_ofn(&ofn, opt);
+  sfd_last_error = NULL;
+  sfd_init_ofn(&ofn, opt);
   ok = GetOpenFileName(&ofn);
   return ok ? ofn.lpstrFile : NULL;
 }
@@ -122,8 +157,8 @@ const char* sfd_open_dialog(sfd_Options *opt) {
 const char* sfd_save_dialog(sfd_Options *opt) {
   int ok;
   OPENFILENAME ofn;
-  last_error = NULL;
-  init_ofn(&ofn, opt);
+  sfd_last_error = NULL;
+  sfd_init_ofn(&ofn, opt);
   ok = GetSaveFileName(&ofn);
   return ok ? ofn.lpstrFile : NULL;
 }
@@ -138,7 +173,7 @@ const char* sfd_save_dialog(sfd_Options *opt) {
 #ifndef _WIN32
 
 
-static const char* file_dialog(sfd_Options *opt, int save) {
+static const char* sfd_file_dialog(sfd_Options *opt, int save) {
   static char result_buf[2048];
   char buf[2048];
   char *p;
@@ -146,11 +181,11 @@ static const char* file_dialog(sfd_Options *opt, int save) {
   FILE *fp;
   int n, len;
 
-  last_error = NULL;
+  sfd_last_error = NULL;
 
   fp = popen("zenity --version", "r");
   if (fp == NULL || pclose(fp) != 0) {
-    last_error = "could not open zenity";
+    sfd_last_error = "could not open zenity";
     return NULL;
   }
 
@@ -173,7 +208,7 @@ static const char* file_dialog(sfd_Options *opt, int save) {
     n += sprintf(buf + n, " --filename=\"");
     p = realpath(opt->path, buf + n);
     if (p == NULL) {
-      last_error = "call to realpath() failed";
+      sfd_last_error = "call to realpath() failed";
       return NULL;
     }
     n += strlen(buf + n);
@@ -190,7 +225,7 @@ static const char* file_dialog(sfd_Options *opt, int save) {
     }
 
     p = opt->filter;
-    while (next_filter(b, &p)) {
+    while (sfd_next_filter(b, &p)) {
       n += sprintf(buf + n, "\"%s\" ", b);
     }
 
@@ -214,12 +249,12 @@ static const char* file_dialog(sfd_Options *opt, int save) {
 
 
 const char* sfd_open_dialog(sfd_Options *opt) {
-  return file_dialog(opt, 0);
+  return sfd_file_dialog(opt, 0);
 }
 
 
 const char* sfd_save_dialog(sfd_Options *opt) {
-  return file_dialog(opt, 1);
+  return sfd_file_dialog(opt, 1);
 }
 
 

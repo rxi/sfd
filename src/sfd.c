@@ -126,7 +126,7 @@ static void init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
   result_buf[0] = '\0';
 
   memset(ofn, 0, sizeof(*ofn));
-  ofn->hwndOwner = sfd_find_main_window();
+  ofn->hwndOwner        = sfd_find_main_window();
   ofn->lStructSize      = sizeof(*ofn);
   ofn->lpstrFilter      = make_filter_str(opt);
   ofn->nFilterIndex     = 1;

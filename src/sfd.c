@@ -28,17 +28,17 @@
 #include "sfd.h"
 
 
-static const char *sfd_last_error;
+static const char *last_error;
 
 
 const char* sfd_get_error(void) {
-  const char *res = sfd_last_error;
-  sfd_last_error = NULL;
+  const char *res = last_error;
+  last_error = NULL;
   return res;
 }
 
 
-static int sfd_next_filter(char *dst, const char **p) {
+static int next_filter(char *dst, const char **p) {
   int len;
 
   *p += strspn(*p, "|");
@@ -62,8 +62,6 @@ static int sfd_next_filter(char *dst, const char **p) {
 #ifdef _WIN32
 
 #include <windows.h>
-
-#pragma comment(lib, "Comdlg32.lib")
 
 typedef struct sfd_FindMainWindowInfo {
   unsigned long process_id;
@@ -94,7 +92,7 @@ HWND sfd_find_main_window() {
   return info.handle_root;
 }
 
-static const char* sfd_make_filter_str(sfd_Options *opt) {
+static const char* make_filter_str(sfd_Options *opt) {
   static char buf[1024];
   int n;
 
@@ -108,7 +106,7 @@ static const char* sfd_make_filter_str(sfd_Options *opt) {
     n += sprintf(buf + n, "%s", name) + 1;
 
     p = opt->filter;
-    while (sfd_next_filter(b, &p)) {
+    while (next_filter(b, &p)) {
       n += sprintf(buf + n, "%s;", b);
     }
 
@@ -123,18 +121,14 @@ static const char* sfd_make_filter_str(sfd_Options *opt) {
 }
 
 
-static void sfd_init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
+static void init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
   static char result_buf[2048];
   result_buf[0] = '\0';
 
   memset(ofn, 0, sizeof(*ofn));
-  if (opt->parent == 0) {
-    ofn->hwndOwner = sfd_find_main_window();
-  } else {
-    ofn->hwndOwner = opt->parent;
-  }
+  ofn->hwndOwner = sfd_find_main_window();
   ofn->lStructSize      = sizeof(*ofn);
-  ofn->lpstrFilter      = sfd_make_filter_str(opt);
+  ofn->lpstrFilter      = make_filter_str(opt);
   ofn->nFilterIndex     = 1;
   ofn->lpstrFile        = result_buf;
   ofn->Flags            = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
@@ -147,8 +141,8 @@ static void sfd_init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
 const char* sfd_open_dialog(sfd_Options *opt) {
   int ok;
   OPENFILENAME ofn;
-  sfd_last_error = NULL;
-  sfd_init_ofn(&ofn, opt);
+  last_error = NULL;
+  init_ofn(&ofn, opt);
   ok = GetOpenFileName(&ofn);
   return ok ? ofn.lpstrFile : NULL;
 }
@@ -157,8 +151,8 @@ const char* sfd_open_dialog(sfd_Options *opt) {
 const char* sfd_save_dialog(sfd_Options *opt) {
   int ok;
   OPENFILENAME ofn;
-  sfd_last_error = NULL;
-  sfd_init_ofn(&ofn, opt);
+  last_error = NULL;
+  init_ofn(&ofn, opt);
   ok = GetSaveFileName(&ofn);
   return ok ? ofn.lpstrFile : NULL;
 }
@@ -173,7 +167,7 @@ const char* sfd_save_dialog(sfd_Options *opt) {
 #ifndef _WIN32
 
 
-static const char* sfd_file_dialog(sfd_Options *opt, int save) {
+static const char* file_dialog(sfd_Options *opt, int save) {
   static char result_buf[2048];
   char buf[2048];
   char *p;
@@ -181,11 +175,11 @@ static const char* sfd_file_dialog(sfd_Options *opt, int save) {
   FILE *fp;
   int n, len;
 
-  sfd_last_error = NULL;
+  last_error = NULL;
 
   fp = popen("zenity --version", "r");
   if (fp == NULL || pclose(fp) != 0) {
-    sfd_last_error = "could not open zenity";
+    last_error = "could not open zenity";
     return NULL;
   }
 
@@ -208,7 +202,7 @@ static const char* sfd_file_dialog(sfd_Options *opt, int save) {
     n += sprintf(buf + n, " --filename=\"");
     p = realpath(opt->path, buf + n);
     if (p == NULL) {
-      sfd_last_error = "call to realpath() failed";
+      last_error = "call to realpath() failed";
       return NULL;
     }
     n += strlen(buf + n);
@@ -225,7 +219,7 @@ static const char* sfd_file_dialog(sfd_Options *opt, int save) {
     }
 
     p = opt->filter;
-    while (sfd_next_filter(b, &p)) {
+    while (next_filter(b, &p)) {
       n += sprintf(buf + n, "\"%s\" ", b);
     }
 
@@ -249,12 +243,12 @@ static const char* sfd_file_dialog(sfd_Options *opt, int save) {
 
 
 const char* sfd_open_dialog(sfd_Options *opt) {
-  return sfd_file_dialog(opt, 0);
+  return file_dialog(opt, 0);
 }
 
 
 const char* sfd_save_dialog(sfd_Options *opt) {
-  return sfd_file_dialog(opt, 1);
+  return file_dialog(opt, 1);
 }
 
 

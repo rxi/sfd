@@ -63,6 +63,34 @@ static int next_filter(char *dst, const char **p) {
 
 #include <windows.h>
 
+typedef struct sfd_FindMainWindowInfo {
+  unsigned long process_id;
+  void* handle_root;
+  void* handle_first;
+} sfd_FindMainWindowInfo;
+
+int sfd_find_main_window_callback(HWND handle, LPARAM lParam)
+{
+  sfd_FindMainWindowInfo* info = (sfd_FindMainWindowInfo*)lParam;
+  unsigned long process_id = 0;
+  GetWindowThreadProcessId(handle, &process_id);
+  if (info->process_id == process_id) {
+    info->handle_first = handle;
+    if (GetWindow(handle, GW_OWNER) == 0 && IsWindowVisible(handle)) {
+      info->handle_root = handle;
+      return 0;
+    }
+  }
+  return 1;
+}
+
+HWND sfd_find_main_window() {
+  sfd_FindMainWindowInfo info = {
+    .process_id = GetCurrentProcessId()
+  };
+  EnumWindows(sfd_find_main_window_callback, (LPARAM)&info);
+  return info.handle_root;
+}
 
 static const char* make_filter_str(sfd_Options *opt) {
   static char buf[1024];
@@ -98,6 +126,7 @@ static void init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
   result_buf[0] = '\0';
 
   memset(ofn, 0, sizeof(*ofn));
+  ofn->hwndOwner        = sfd_find_main_window();
   ofn->lStructSize      = sizeof(*ofn);
   ofn->lpstrFilter      = make_filter_str(opt);
   ofn->nFilterIndex     = 1;

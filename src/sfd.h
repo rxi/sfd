@@ -15,6 +15,7 @@ typedef struct {
   const char *path;
   const char *filter_name;
   const char *filter;
+  const char *extension;
 } sfd_Options;
 
 const char* sfd_get_error(void);

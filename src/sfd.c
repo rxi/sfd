@@ -137,6 +137,7 @@ static void init_ofn(OPENFILENAME *ofn, sfd_Options *opt) {
   ofn->nMaxFile         = sizeof(result_buf) - 1;
   ofn->lpstrInitialDir  = opt->path;
   ofn->lpstrTitle       = opt->title;
+  ofn->lpstrDefExt      = opt->extension;
 }
 
 
@@ -237,6 +238,9 @@ static const char* file_dialog(sfd_Options *opt, int save) {
 
   if (len > 0) {
     result_buf[len - 1] = '\0';
+    if (save && opt->extension && !strstr(result_buf, opt->extension)) {
+      sprintf(&result_buf[len - 1], ".%s", opt->extension);
+    }
     return result_buf;
   }
 
